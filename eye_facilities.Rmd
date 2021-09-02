@@ -50,3 +50,7 @@ Focusing on cataract we can link services to cataract vision impairment and effe
 (Kevin) Do surveillance and community case finding programs exist for eye diseases? There are two sides to geographic access to care: (1) individuals with disease who travel to seek care and (2) health systems that expend resources to find cases in communities. It would be good to get an idea about if/what kinds of programs exist for the latter.
 (Ian) On case finding: broadly yes, there will be community cataract screening +/- cataract surgical camps. I will ask Shaffi in Malawi for an overview of current practice.
 Generally, the trend is to move away from delivering cataract surgery in camps as outcomes may be worse and follow-up care less structured, so even where the health system identifies people as cataract vision impaired in the community those people may well be travelling to access surgery at secondary centres. Or not… depending on their motivation, financial means and physical ability to make the journey.
+
+-- JN to do
+- obtain geo data (roads of various levels, altitude, water)
+- population density data (see Ians paper)
