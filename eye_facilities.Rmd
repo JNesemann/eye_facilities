@@ -10,12 +10,11 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 ```
-## Set up
+## 1. Set up
 
 Load libraries
 ```{r}
 library(tidyverse)            # for data cleaning and data viz
-library(lubridate)            # for dates
 library(here)                 # for directory management
 library(sf)                   # for spatial data processing
 theme_set(theme_minimal())    # set ggplot theme
@@ -23,14 +22,14 @@ theme_set(theme_minimal())    # set ggplot theme
 
 Read data
 ```{r}
-eye_fac <- read.csv(here("data", "Malawi_facilities_public_gps.csv"))
+eye_fac <- read.csv(here("Malawi_facilities_public_gps.csv"))
 eye_fac_sf <- eye_fac %>% st_as_sf(coords = c("long", "lat"), crs=4326)
 eye_fac_sf_t <- st_transform(eye_fac_sf, crs=2163)
 
 malawi <- st_read(here("data", "geo_shp", "mwi_admbnda_adm2_nso_20181016.shp"))
 ```
 
-## Eye health facilities in Malawi
+## 2. Eye health facilities in Malawi
 
 Eye health facilities are defined as public sector health facilities that have a permanent member of staff who is trained in ophthalmic care. Types of facilities can range from small health clinics to central hospitals. 
 ```{r}
@@ -40,13 +39,137 @@ ggplot() +
   theme_void() 
 ```
 
-## Questions
-(Kevin) What eye health outcomes are we interested in and what does the referral system look like in LMICs (i.e., Malawi)? For instance, in this Malawi example, we have a number of health facilities with trained ophthalmic staff but no capacity to perform cataract surgical services. So what kind of care can be expected in these facilities and at what point clinically are patients referred to larger health centers with more robust eye care infrastructure?
-(Ian) I think the best bet would be to start by looking at travel time to cataract surgical services (in pop 50+) rather than all public eye health facilities (although the third indicator requires consideration of travel time between them). The primary eye care services available from the non-cataract surgical facilities will be varied and essentially unknowable at scale. Patients with cataract and a certain level of impairment will be referred to secondary care. The visual acuity threshold for referral varies according to service maturity. E.g. in Malawi there will be lots of cataract blind people, so those with lower levels of vision impairment will not be prioritised. Patients will be referred for other non-cataract conditions requiring treatment too. Ophthalmic nurses will prescribe antibiotics, anti-inflammatories, anti-allergy meds as required/available.
-Focusing on cataract we can link services to cataract vision impairment and effective cataract surgical coverage (eCSC) outcomes in regions where it is measured in the population and CSR (cataract surgical output – ops per million per year) from facilities.
+## 3. Prepare Friction Surface
 
---
+Download Packages
+```{r}
+## Packages
+library(gdistance)
+library(sp)
+library(abind)
+library(rje)
+library(ggplot2)
+library(malariaAtlas)
+## Plot defaults
+theme_set(theme_minimal(base_size=14))
+```
 
+Clip friction surface for Malawi
+```{r}
+malawi_clip <- readRDS((here("data", "geo_shp", "gadm36_MWI_0_sp.rds")))
+plot(malawi_clip, main="Shape for Clipping")
+
+friction <- malariaAtlas::getRaster(
+                      surface = "A global friction surface enumerating land-based travel speed for a nominal year 2015",
+                      shp = malawi_clip)
+malariaAtlas::autoplot_MAPraster(friction)
+```
+
+Convert friction surface to a transition matrix
+```{r}
+T <- gdistance::transition(friction, function(x) 1/mean(x), 8) 
+T.GC <- gdistance::geoCorrection(T)   
+```
+
+## 4. Prepare Point Locations
+
+All eye care facilities
+```{r}
+## Point locations
+point.locations.all <- eye_fac %>% dplyr::select(long, lat, name, cataract_surgical_services)
+names(point.locations.all) <- c("X_COORD", "Y_COORD", "name", "cataract_surgical_services")
+
+coordinates(point.locations.all) <- ~ X_COORD + Y_COORD #Keep only point coordinates within the shapefile bounds
+
+points.all <- as.matrix(point.locations.all@coords) #convert to matrix of lat-longs for accessibility algorithm
+```
+
+Eye care facilities with cataract surgery capacity
+```{r}
+## Point locations
+point.locations.surgery <- eye_fac %>% dplyr::select(long, lat, name, cataract_surgical_services)
+names(point.locations.surgery) <- c("X_COORD", "Y_COORD", "name", "cataract_surgical_services")
+point.locations.surgery <- point.locations.surgery %>% filter(cataract_surgical_services!="None")
+
+coordinates(point.locations.surgery) <- ~ X_COORD + Y_COORD #Keep only point coordinates within the shapefile bounds
+
+points.surgery <- as.matrix(point.locations.surgery@coords) #convert to matrix of lat-longs for accessibility algorithm
+```
+
+Eye care facilities with cataract surgery capacity, permanent only
+```{r}
+## Point locations
+point.locations.surgery.perm <- eye_fac %>% dplyr::select(long, lat, name, cataract_surgical_services)
+names(point.locations.surgery.perm) <- c("X_COORD", "Y_COORD", "name", "cataract_surgical_services")
+point.locations.surgery.perm <- point.locations.surgery.perm %>% filter(cataract_surgical_services=="Permanent")
+
+coordinates(point.locations.surgery.perm) <- ~ X_COORD + Y_COORD #Keep only point coordinates within the shapefile bounds
+
+points.surgery.perm <- as.matrix(point.locations.surgery.perm@coords) #convert to matrix of lat-longs for accessibility algorithm
+```
+
+## 5. Accumulated cost surface algorithm
+
+All eye care facilities
+```{r}
+access.raster.all <- gdistance::accCost(T.GC, points.all) #run an “accumulated cost surface” algorithm to calculate travel time to closest facility
+
+p <- malariaAtlas::autoplot_MAPraster(access.raster.all, shp_df=malawi_clip, printed=F)
+
+full_plot <- p[[1]] + 
+  geom_point(data=data.frame(point.locations.all@coords), aes(x=X_COORD, y=Y_COORD)) +
+  scale_fill_gradientn(colors = rev(rje::cubeHelix(gamma=1.0, 
+                                                 start=1.5, 
+                                                 r=-1.0, 
+                                                 hue=1.5, 
+                                                 n=16)), 
+                     name="Minutes \n of Travel") + 
+  ggtitle("Travel Time to Most Accessible Eye Care Facility") +
+  theme(axis.text=element_blank(), panel.border=element_rect(fill=NA, color="white"))
+
+print(full_plot)
+```
+
+Eye care facilities with cataract surgery capacity
+```{r}
+access.raster.surgery <- gdistance::accCost(T.GC, points.surgery) #run an “accumulated cost surface” algorithm to calculate travel time to closest facility
+
+p <- malariaAtlas::autoplot_MAPraster(access.raster.surgery, shp_df=malawi_clip, printed=F)
+
+full_plot <- p[[1]] + 
+  geom_point(data=data.frame(point.locations.surgery@coords), aes(x=X_COORD, y=Y_COORD)) +
+  geom_sf(data = malawi, fill = NA) +
+  scale_fill_gradientn(colors = rev(rje::cubeHelix(gamma=1.0, 
+                                                 start=1.5, 
+                                                 r=-1.0, 
+                                                 hue=1.5, 
+                                                 n=16)), 
+                     name="Minutes \n of Travel") + 
+  ggtitle("Travel Time to Most Accessible Eye Care Facility") +
+  theme(axis.text=element_blank(), panel.border=element_rect(fill=NA, color="white"))
+
+print(full_plot)
+```
+
+Eye care facilities with cataract surgery capacity, permanent only
+```{r}
+access.raster.surgery.perm <- gdistance::accCost(T.GC, points.surgery.perm) #run an “accumulated cost surface” algorithm to calculate travel time to closest facility
+
+p <- malariaAtlas::autoplot_MAPraster(access.raster.surgery.perm, shp_df=malawi_clip, printed=F)
+
+full_plot <- p[[1]] + 
+  geom_point(data = data.frame(point.locations.surgery.perm@coords), aes(x = X_COORD, y = Y_COORD)) +
+  geom_sf(data = malawi, fill = NA) +
+  scale_fill_gradientn(colors = rev(rje::cubeHelix(gamma = 1.0, 
+                                                 start = 1.5, 
+                                                 r = -1.0, 
+                                                 hue = 1.5, 
+                                                 n = 16)), 
+                     name = "Minutes \n of Travel") + 
+  ggtitle("Travel Time to Most Accessible Eye Care Facility") +
+  theme(axis.text = element_blank(), panel.border = element_rect(fill = NA, color = "white"))
+
+<<<<<<< HEAD
 (Kevin) Do surveillance and community case finding programs exist for eye diseases? There are two sides to geographic access to care: (1) individuals with disease who travel to seek care and (2) health systems that expend resources to find cases in communities. It would be good to get an idea about if/what kinds of programs exist for the latter.
 (Ian) On case finding: broadly yes, there will be community cataract screening +/- cataract surgical camps. I will ask Shaffi in Malawi for an overview of current practice.
 Generally, the trend is to move away from delivering cataract surgery in camps as outcomes may be worse and follow-up care less structured, so even where the health system identifies people as cataract vision impaired in the community those people may well be travelling to access surgery at secondary centres. Or not… depending on their motivation, financial means and physical ability to make the journey.
@@ -54,3 +177,7 @@ Generally, the trend is to move away from delivering cataract surgery in camps a
 -- JN to do
 - obtain geo data (roads of various levels, altitude, water)
 - population density data (see Ians paper)
+=======
+print(full_plot)
+```
+>>>>>>> 655340edbaa4770eb735c9e5c87e1680dcaaacb7
