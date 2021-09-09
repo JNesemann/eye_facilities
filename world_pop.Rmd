@@ -1,0 +1,317 @@
+---
+title: "World population data"
+author: "John Nesemann, Kevin Tang, Ian McCormick"
+date: "9/8/2021"
+output: 
+  html_document:
+   toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Set up
+
+Load packages
+```{r packages}
+# remotes::install_github('wpgp/wopr') # you first need to install the packages directly from github
+# library(wopr)
+library(tidyverse)
+library(here)
+library(sf)
+# devtools::install_github("wpgp/wpgpDownloadR")
+library(wpgpDownloadR)
+# devtools::install_github("wpgp/wpgpCovariates")
+library(raster)
+library(sp)
+library(rgdal)
+# library(rasterVis)
+library(viridis)
+# library(stars)
+library(tmap)
+```
+Load data
+```{r data}
+eye_fac <- read_csv(here("data","Malawi_facilities_gps.csv")) %>%
+  rename(cat_serv=`Cataract surgical services`)
+eye_fac_sf <- eye_fac %>% 
+  st_as_sf(coords = c("Long","Lat"), # converting to an sf object
+           crs = "4326") # setting crs to be same as that used by world pop (WGS84)
+malawi <- st_read(here("data","mwi_adm_nso_20181016_shp.nosync","mwi_admbnda_adm2_nso_20181016.shp"))
+
+```
+
+## Download population data.
+
+World pop has two main methods of top down estimation modelling population data: constrained and unconstrained (https://www.worldpop.org/methods/top_down_constrained_vs_unconstrained). Essentially unconstrained estimates population over all land grid squares whereas constrained estimates only within areas mapped as containing built settlements. For the rest of this analysis we will use the constrained estimates as these are less likely to predict small population numbers in likely uninhabited areas; however, these estimates are only available for 2020. We could also consider using unconstrained estimates as these may produce better looking maps and then do sensitivity analyses with constrained estimates.
+
+The data is only available in raster form and is further divided by age group. Thus we will first need to download all the rasters we are interested in, merge them, and then extract meaningful population data to map.
+
+Note: Knitr does not like this section of code, probably because it takes a very long time. I am inactivating it for knitr but you can reactivate it independently to download the data to your own computer.
+
+```{r download world pop data}
+# wpgpListCountries() %>%                  # lists all ISO3 (country code) available on WorldPop ftp server
+#   filter(Country=="Malawi")              # confirms Malawi is available and has ISO3 = MWI
+# 
+# wpgpListCountryDatasets(ISO3 = "MWI")    # returns dataframe of available covariates for Malawi 
+
+# The data can be downloaded as raster files
+# wpgpGetCountryDataset(ISO3 = "MWI",   # ISO3 of desired country
+#                      covariate = "agesex_m_50_2020_constrained", # covariate(s) desired
+#                      destDir = "~/Library/Mobile Documents/com~apple~CloudDocs/R projects/eye_facilities/data/pop") # directory on computer to download the files
+
+# However it will only download one age grouping (e.g., females 50-54) at a time
+
+# # creating a list of covariates we want to download
+#   raster.list <- wpgpListCountryDatasets(ISO3 = "MWI") %>%
+#     # filtering out the specific covariates we want (constrained estimates of age and sex distribution for those 50+)
+#     filter(grepl("agesex_", Covariate)) %>%
+#     filter(grepl("_50", Covariate) | grepl("_55", Covariate) | grepl("_60", Covariate) |
+#              grepl("_65", Covariate) | grepl("_70", Covariate) | grepl("_75", Covariate) |
+#              grepl("_80", Covariate)) %>%
+#     filter(grepl("_2020_constrained$", Covariate)) %>%
+#     dplyr::select(Covariate)
+#   raster.list
+#   
+#   # turning that list into a vector
+#   raster.list.v <- raster.list$Covariate
+# 
+# # Building a function to download all of the variables of interest
+#   
+# get.raster <- function(x, dir) {
+#   
+#   # setting ISO
+#   ISO3 <- "MWI"
+#   # setting destination directory
+#   destDir <- dir
+#   # getting a raster
+#   raster <- wpgpGetCountryDataset(ISO3 = ISO3,  
+#                                 covariate = x, 
+#                                 destDir = destDir)
+#   # returning the results
+#   raster
+#   
+# }
+# 
+# # testing the function
+# get.raster("agesex_f_55_2020_constrained", here("data", "pop_constrained"))   # works for a single covariate
+# 
+# # applying it over all the desired covariates
+# sapply(X = raster.list.v,  # the covariates we want rasters for
+#        dir = here("data", "pop_constrained"),
+#        FUN = get.raster,   # the function to apply
+#        simplify = T)
+```
+
+## Stack the individual age and sex group rasters and combine them into a single raster.
+
+Each raster file had only the estimates for it's corresponding age and sex band, what we want to do now is combine them all into a multi-layered raster AKA a stack. Once we have this stack we can combine all the layers to generate plot the number of individuals 50+ per square km alongside the cataract surgical centers. We can also extract the data into a dataframe which can then be used for analysis.
+
+Note: Knitr does not like this section of code, probably because it takes a very long time. I am inactivating it for knitr but you can reactivate it independently to download the data to your own computer.
+
+```{r combining the individual world pop rasters}
+#### first I will check my work to ensure the functions are doing what I desire. ####
+# # loading raster into an R object
+# m50to54 <- raster(here("data", "pop", "mwi_agesex_m_50_2020_constrained.tif"))
+# names(m50to54) <- "m_50" # look at the raster attributes, it is a RasterLayer
+# m55to59 <- raster(here("data", "pop", "mwi_agesex_m_55_2020_constrained.tif"))
+# names(m55to59) <- "m_55"
+# 
+# # creating a stack
+# ts.stack <- stack(m50to54, m55to59)
+# ts.stack
+# 
+# # calculating new raster which is the sum of each raster in the stack
+# ts.sum <- calc(ts.stack, fun=sum)
+# ts.sum
+# summary(ts.sum)
+# 
+# # repeating the process on dataframes to check my work
+# 
+#   # converting to dataframes
+#   m_50df <- as.data.frame(rasterToPoints(m50to54))
+#   m_55df <- as.data.frame(rasterToPoints(m55to59))
+#   
+#   # joining the two 
+#   mmerge <- full_join(m_50df, m_55df,  by = c("x", "y")) %>%
+#     # calculating total values for each point
+#     mutate(total=m_50+m_55)
+#   
+#   # summarizing 
+#   summary(mmerge$total)
+#   # and comparing
+#   summary(ts.sum)
+#   # looks like it works
+  
+# #### repeating the process for all of the downloaded rasters ####
+# 
+#   # getting a list of all filenames
+#   list <- list.files(here("data", "pop_constrained"), full.names = T)
+# 
+#   # creating the stack
+#   popstack <- stack(list)
+#   popstack
+# 
+#   # giving the stack more intelligible names
+#   names(popstack) <- c("f_50","f_55","f_60","f_65","f_70", "f_75", "f_80",
+#                      "m_50","m_55","m_60","m_65","m_70", "m_75", "m_80")
+# 
+#   # calculating a new raster which is the sum of the population values in all the stacks
+#   popsum <- calc(popstack, fun=sum)
+# 
+#   # renaming the newly created layer
+#   names(popsum) <- "total_pop"
+# 
+#   # saving the newly created raster
+#   # writeRaster(popsum, here("data", "pop_constrained", "popsum_constrained.tif"))
+```
+
+## Plot the resulting raster with permanent cataract surgical facilities.
+
+The only package I have found that allows plotting of raster and sf objects together is the tmap package.
+```{r mapping using constrained data}
+
+# Opening the tiff file created above (can do this instead of downloading and mergin everything everytime you run the code)
+popsum <- raster(here("data", "pop_constrained", "popsum_constrained.tif"))
+
+# plotting with tmap
+tm_shape(malawi) + tm_polygons() +
+  tm_shape(popsum) +
+  tm_raster(style = "order",
+            palette = "viridis",
+            # colorNA = "grey",
+            title = "Number of individuals 50+ per 100m2") + 
+  tm_shape(eye_fac_sf %>% filter(cat_serv == "Permanent")) + 
+  tm_dots(size = 0.05,
+          col = "red") +
+  tm_shape(eye_fac_sf %>% filter(cat_serv == "Occasional")) + 
+  tm_dots(size = 0.05,
+          col = "pink") +
+  tm_add_legend(type = "symbol",
+                col = c("red","pink"),
+                labels = c("Permanent cataract surgical facilities",
+                           "Occasional cataract surgical facilities")) + 
+  tm_layout(legend.outside = T,
+            legend.outside.position = "right",
+            legend.stack = "vertical",
+            legend.frame = T,
+            legend.outside.size = 0.5)
+
+```
+
+## Repeating the whole process for unconstrained population estimates.
+
+The resulting map has less bare space (indicating areas where no structures could be determined and thus were considered to be uninhabited). The bare space is instead replaced with colors close to purple, indicating 0 or close to 0 inhabitants in thatn 100m2 area. Personally, I think this looks much better than the map that uses constrained estimates.
+
+Note: Inactivating the sections of code responsible for downloading pop data and converting all of them into a single raster. Feel free to reactivate as needed.
+
+```{r repeating the entire process for unconstrained population estimates}
+
+# ### DOWNLOADING UNCONSTRAINED RASTERS ####
+# 
+#   # creating a list of covariates we want to download
+#   raster.list <- wpgpListCountryDatasets(ISO3 = "MWI") %>%
+#     # filtering out the specific covariates we want (constrained estimates of age and sex distribution for those 50+)
+#     filter(grepl("agesex_", Covariate)) %>%
+#     filter(grepl("_50", Covariate) | grepl("_55", Covariate) | grepl("_60", Covariate) |
+#              grepl("_65", Covariate) | grepl("_70", Covariate) | grepl("_75", Covariate) |
+#              grepl("_80", Covariate)) %>%
+#     filter(grepl("_2020$", Covariate)) %>%
+#     dplyr::select(Covariate)
+#   raster.list
+#   raster.list.v <- raster.list$Covariate
+#   
+#   # applying it over all the desired covariates
+#   sapply(X = raster.list.v,  # the covariates we want rasters for
+#          dir = here("data", "pop_unconstrained"),
+#          FUN = get.raster,   # the function to apply
+#          simplify = T)
+# 
+# #### COMBINING RASTERS ####
+# 
+#   # getting a list of all filenames
+#   list.unconst <- list.files(here("data", "pop_unconstrained"), full.names = T)
+#   
+#   # creating the stack
+#   popstack.unconst <- stack(list.unconst)
+# 
+#   # giving the stack more intelligible names
+#   names(popstack.unconst) <- c("f_50","f_55","f_60","f_65","f_70", "f_75", "f_80",
+#                      "m_50","m_55","m_60","m_65","m_70", "m_75", "m_80")
+#   
+#   # calculating a new raster which is the sum of the population values in all the stacks
+#   popsum.unconst <- calc(popstack.unconst, fun=sum)
+#   
+#   # renaming the newly created layer
+#   names(popsum.unconst) <- "total_pop"
+#   
+#   # saving the newly created raster
+#   # writeRaster(popsum.unconst, here("data", "pop_unconstrained", "popsum_unconstrained.tif"))
+
+#### PLOTTING WITH TMAP ####
+  # Opening the tiff file created above (can do this instead of downloading and mergin everything everytime you run the code)
+  popsum.unconst <- raster(here("data", "pop_unconstrained", "popsum_unconstrained.tif"))
+  
+  # plotting
+  tm_shape(malawi) + tm_polygons() +
+  tm_shape(popsum.unconst) +
+  tm_raster(style = "order",
+            palette = "viridis",
+            # colorNA = "grey",
+            title = "Number of individuals 50+ per 100m2") + 
+  tm_shape(eye_fac_sf %>% filter(cat_serv == "Permanent")) + 
+  tm_dots(size = 0.05,
+          col = "red") +
+  tm_shape(eye_fac_sf %>% filter(cat_serv == "Occasional")) + 
+  tm_dots(size = 0.05,
+          col = "pink") +
+  tm_add_legend(type = "symbol",
+                col = c("red","pink"),
+                labels = c("Permanent cataract surgical facilities",
+                           "Occasional cataract surgical facilities")) + 
+  tm_layout(legend.outside = T,
+            legend.outside.position = "right",
+            legend.stack = "vertical",
+            legend.frame = T,
+            legend.outside.size = 0.5)
+```
+
+## Alternatively one can turn the raster into point data and plot it.
+
+This provides a lot of overlap in the points and I think either of the above maps are better, but the data in this form may be useful for later analyses. The example below uses constrained population estimates. It is homogenous because there is so much overlap between the points. 
+
+```{r mapping with points}
+# converting stack to dataframe
+popsum.df <- as.data.frame(rasterToPoints(popsum)) %>%
+  rename(total=popsum_constrained)
+
+# checking my work on a random sample
+  # ts <- sample_n(popsum.df, 10000) 
+  # 
+  # ts %>% group_by(x, y) %>% mutate(dups=n()) %>% filter(dups>1) # no duplicates
+  # 
+  # ts %>% filter(is.na(m_50)) # no data are missing
+
+# Saving the resultant dataframe
+# write_csv(popsum.df, here("data","pop_constrained","popsum_constrained_df.csv"))
+
+# converting the dataframe to an SF object
+popsum.sf <- popsum.df %>%
+  st_as_sf(coords = c("x","y"), # converting to an sf object
+           crs = "4326")
+
+# plotting -- note this takes a while
+ggplot(data = popsum.sf) +
+  geom_sf(data = popsum.sf,
+          aes(fill = total, 
+              color = total, 
+              alpha = 0.05), 
+          inherit.aes = F) + 
+  scale_fill_viridis() + 
+  scale_color_viridis() +
+  geom_sf(data = filter(eye_fac_sf, cat_serv == "Permanent"), color = "red") + 
+  geom_sf(data = filter(eye_fac_sf, cat_serv == "Occasional"), color = "pink")
+
+```
+

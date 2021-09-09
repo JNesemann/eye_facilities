@@ -22,11 +22,11 @@ theme_set(theme_minimal())    # set ggplot theme
 
 Read data
 ```{r}
-eye_fac <- read.csv(here("Malawi_facilities_public_gps.csv"))
-eye_fac_sf <- eye_fac %>% st_as_sf(coords = c("long", "lat"), crs=4326)
+eye_fac <- read.csv(here("data", "Malawi_facilities_public_gps.csv"))
+eye_fac_sf <- eye_fac %>% st_as_sf(coords = c("Long", "Lat"), crs=4326)
 eye_fac_sf_t <- st_transform(eye_fac_sf, crs=2163)
 
-malawi <- st_read(here("data", "geo_shp", "mwi_admbnda_adm2_nso_20181016.shp"))
+malawi <- st_read(here("data", "mwi_admbnda_adm2_nso_20181016.shp"))
 ```
 
 ## 2. Eye health facilities in Malawi
@@ -56,7 +56,7 @@ theme_set(theme_minimal(base_size=14))
 
 Clip friction surface for Malawi
 ```{r}
-malawi_clip <- readRDS((here("data", "geo_shp", "gadm36_MWI_0_sp.rds")))
+malawi_clip <- readRDS((here("data", "gadm36_MWI_0_sp.rds"))) # "geo_shp", 
 plot(malawi_clip, main="Shape for Clipping")
 
 friction <- malariaAtlas::getRaster(
@@ -76,7 +76,7 @@ T.GC <- gdistance::geoCorrection(T)
 All eye care facilities
 ```{r}
 ## Point locations
-point.locations.all <- eye_fac %>% dplyr::select(long, lat, name, cataract_surgical_services)
+point.locations.all <- eye_fac %>% dplyr::select(Long, Lat, Facility.Name, Cataract.surgical.services)
 names(point.locations.all) <- c("X_COORD", "Y_COORD", "name", "cataract_surgical_services")
 
 coordinates(point.locations.all) <- ~ X_COORD + Y_COORD #Keep only point coordinates within the shapefile bounds
@@ -87,7 +87,7 @@ points.all <- as.matrix(point.locations.all@coords) #convert to matrix of lat-lo
 Eye care facilities with cataract surgery capacity
 ```{r}
 ## Point locations
-point.locations.surgery <- eye_fac %>% dplyr::select(long, lat, name, cataract_surgical_services)
+point.locations.surgery <- eye_fac %>% dplyr::select(Long, Lat, Facility.Name, Cataract.surgical.services)
 names(point.locations.surgery) <- c("X_COORD", "Y_COORD", "name", "cataract_surgical_services")
 point.locations.surgery <- point.locations.surgery %>% filter(cataract_surgical_services!="None")
 
@@ -99,7 +99,7 @@ points.surgery <- as.matrix(point.locations.surgery@coords) #convert to matrix o
 Eye care facilities with cataract surgery capacity, permanent only
 ```{r}
 ## Point locations
-point.locations.surgery.perm <- eye_fac %>% dplyr::select(long, lat, name, cataract_surgical_services)
+point.locations.surgery.perm <- eye_fac %>% dplyr::select(Long, Lat, Facility.Name, Cataract.surgical.services)
 names(point.locations.surgery.perm) <- c("X_COORD", "Y_COORD", "name", "cataract_surgical_services")
 point.locations.surgery.perm <- point.locations.surgery.perm %>% filter(cataract_surgical_services=="Permanent")
 
