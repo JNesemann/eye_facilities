@@ -143,7 +143,7 @@ summary(ts.sum)
 #### repeating the process for all of the downloaded rasters ####
 
   # getting a list of all filenames
-  list <- list.files(here("data", "pop_constrained"), full.names = T)
+  list <- list.files(here("data", "pop_constrained"), full.names = TRUE)
 
   # creating the stack
   popstack <- stack(list)
@@ -152,6 +152,7 @@ summary(ts.sum)
   # giving the stack more intelligible names
   names(popstack) <- c("f_50","f_55","f_60","f_65","f_70", "f_75", "f_80",
                      "m_50","m_55","m_60","m_65","m_70", "m_75", "m_80")
+  popstack
 
   # calculating a new raster which is the sum of the population values in all the stacks
   popsum <- calc(popstack, fun=sum)
@@ -160,7 +161,7 @@ summary(ts.sum)
   names(popsum) <- "total_pop"
 
   # saving the newly created raster
-  writeRaster(popsum, here("data", "rasters", "popsum_constrained.tif"))
+  # writeRaster(popsum, here("data", "rasters", "popsum_constrained.tif"))
 ```
 
 ## Plot the resulting raster with permanent cataract surgical facilities.
@@ -196,7 +197,7 @@ constrained_map <- tm_shape(malawi) + tm_polygons() +
 constrained_map
 
 # saving 
-tmap_save(constrained_map, "data/maps/constrained.pdf")
+# tmap_save(constrained_map, "data/maps/constrained.pdf")
 
 ```
 
