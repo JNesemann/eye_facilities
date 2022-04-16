@@ -9,8 +9,8 @@ library(terra)
 library(sf)
 
 # will use the uncontrained raster as this has values for all pixels
-popsum.uncon <- rast(here("data", "rasters", "popsum_unconstrained.tif"))
-plot(popsum.uncon)
+popsum.uncon <- raster(here("data", "rasters", "popsum_unconstrained.tif"))
+plot(popsum.uncon, col = "red")
 popsum.poly <- as.polygons(popsum.uncon > -Inf)
 plot(popsum.poly)
 class(popsum.poly)
