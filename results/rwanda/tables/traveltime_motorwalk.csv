@@ -1,0 +1,7 @@
+Services,Transportation,<1 hour,1-2 hours,>2 hours
+All eye care facilities,Motorized,1355417 (99.8%),2227 (0.2%),33 (0%)
+Facilities with surgical services,Motorized,1355037 (99.8%),2608 (0.2%),33 (0%)
+Facilities with permanent surgical services,Motorized,1008555 (74.3%),255528 (18.8%),93485 (6.9%)
+All eye care facilities,Walking,326919 (24.1%),461665 (34%),569094 (41.9%)
+Facilities with surgical services,Walking,303090 (22.3%),442342 (32.6%),612246 (45.1%)
+Facilities with permanent surgical services,Walking,118173 (8.7%),117306 (8.6%),1122089 (82.7%)

@@ -10,14 +10,14 @@ library(malariaAtlas)
 #### data ####
 
 # friction surfaces
-world.motor <- raster(here("data","rasters","frictionsurfaces","2020_motorized_friction_surface.geotiff"))
-world.walk <- raster(here("data","rasters","frictionsurfaces","2020_walking_only_friction_surface.geotiff"))
+world.motor <- raster(here("data","frictionsurfaces","2020_motorized_friction_surface.geotiff"))
+world.walk <- raster(here("data","frictionsurfaces","2020_walking_only_friction_surface.geotiff"))
 
 # shape for clipping the raster
-malawi_clip <- readRDS(here("data","popsum_sf.rds"))
+malawi_clip <- readRDS(here("data","malawi","popsum_sf.rds"))
 
 # eye facilities data
-eye_fac <- read.csv(here("data", "Malawi_facilities_public_gps.csv"))
+eye_fac <- read.csv(here("data", "malawi", "Malawi_facilities_public_gps.csv"))
 eye_fac_sf <- eye_fac %>% st_as_sf(coords = c("Long", "Lat"), crs=4326)
 eye_fac_sf_t <- st_transform(eye_fac_sf, crs=2163)
 
@@ -173,21 +173,21 @@ p[[1]] +
 #### saving the rasters ####
 
 # motor
-writeRaster(access.motor.surgperm, here("data","rasters","traveltimes", "motor travel time",
+writeRaster(access.motor.surgperm, here("data","malawi","rasters","traveltimes", "motor travel time",
                                              "access_motor_surgperm.tif"), overwrite=TRUE)
 
-writeRaster(access.motor.surg, here("data","rasters","traveltimes","motor travel time",
+writeRaster(access.motor.surg, here("data","malawi","rasters","traveltimes","motor travel time",
                                         "access_motor_surg.tif"), overwrite=TRUE)
 
-writeRaster(access.motor.all, here("data","rasters","traveltimes","motor travel time",
+writeRaster(access.motor.all, here("data","malawi","rasters","traveltimes","motor travel time",
                                     "access_motor_all.tif"), overwrite=TRUE)
 
 # walking
-writeRaster(access.walk.all, here("data","rasters","traveltimes","walk travel time",
+writeRaster(access.walk.all, here("data","malawi","rasters","traveltimes","walk travel time",
                                   "access_walk_all.tif"), overwrite=TRUE)
 
-writeRaster(access.walk.surg, here("data","rasters","traveltimes","walk travel time",
+writeRaster(access.walk.surg, here("data","malawi","rasters","traveltimes","walk travel time",
                                    "access_walk_surg.tif"), overwrite=TRUE)
 
-writeRaster(access.walk.surgperm, here("data","rasters","traveltimes","walk travel time",
+writeRaster(access.walk.surgperm, here("data","malawi","rasters","traveltimes","walk travel time",
                                        "access_walk_surgperm.tif"), overwrite=TRUE)
