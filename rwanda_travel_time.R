@@ -35,21 +35,11 @@ rwanda.motor <- crop(world.motor, rwanda_clip)
 rwanda.motor <- mask(rwanda.motor, rwanda_clip)
 malariaAtlas::autoplot_MAPraster(rwanda.motor) # looks quite homogenous
 
-# walking
-rwanda.walk <- crop(world.walk, rwanda_clip)
-rwanda.walk <- mask(rwanda.walk, rwanda_clip)
-malariaAtlas::autoplot_MAPraster(rwanda.walk) # still looks quite homogenous
-
-
 #### convert friction surface to transition matrix ####
 
 # motor
 T <- gdistance::transition(rwanda.motor, function(x) 1/mean(x), 8) 
 T.GC <- gdistance::geoCorrection(T) # this corrects distance for curvature of earth
-
-# walking 
-T.walk <- gdistance::transition(rwanda.walk, function(x) 1/mean(x), 8) 
-T.GC.walk <- gdistance::geoCorrection(T.walk)
 
 
 #### preparing point locations ####
@@ -90,19 +80,6 @@ plot(access.motor.surg)
 access.motor.surgperm <- gdistance::accCost(T.GC, points.surgery.perm) 
 plot(access.motor.surgperm)
 
-## walking
-# all eye care facilities
-access.walk.all <- gdistance::accCost(T.GC.walk, points.all) 
-plot(access.walk.all)
-
-# facilities with cataract surgical capacities
-access.walk.surg <- gdistance::accCost(T.GC.walk, points.surgery) 
-plot(access.walk.surg)
-
-# facilities with permanent cataract surgical capacity
-access.walk.surgperm <- gdistance::accCost(T.GC.walk, points.surgery.perm) 
-plot(access.walk.surgperm)
-
 #### saving the rasters ####
 
 # motor
@@ -114,18 +91,3 @@ writeRaster(access.motor.surg, here("data", "rwanda","rasters","traveltimes","mo
 
 writeRaster(access.motor.all, here("data", "rwanda", "rasters","traveltimes","motor travel time",
                                    "access_motor_all.tif"), overwrite=TRUE)
-
-# walking
-writeRaster(access.walk.all, here("data", "rwanda", "rasters","traveltimes","walk travel time",
-                                  "access_walk_all.tif"), overwrite=TRUE)
-
-writeRaster(access.walk.surg, here("data","rwanda", "rasters","traveltimes","walk travel time",
-                                   "access_walk_surg.tif"), overwrite=TRUE)
-
-writeRaster(access.walk.surgperm, here("data","rwanda", "rasters","traveltimes","walk travel time",
-                                       "access_walk_surgperm.tif"), overwrite=TRUE)
-
-
-
-
-
