@@ -413,6 +413,7 @@ table <- full_join(prim_sec_table, prim_tert_table) %>%
          "% eye care facilities <2 hours travel to nearest cataract surgical centre" = p_less2,
          "% eye care facilities <1 hour travel to nearest permanent cataract surgical centre" = tert_p_less1,
          "% eye care facilities <2 hours travel to nearest permanent cataract surgical centre" = tert_p_less2)
+table
 
 write_csv(table, here("results", "rwanda", "tables", "referral_linkages.csv"))
 

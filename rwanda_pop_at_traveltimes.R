@@ -49,7 +49,7 @@ popsum.agg <- raster::aggregate(popsum,
                                 fact = 10, 
                                 fun = sum, 
                                 dissolve = T,
-                                expand = T)
+                                expand = TRUE)
 
 compareRaster(popsum.agg, access.motor.all, resolution = T, extent = F, rowcol = F) # same resolution
 
@@ -79,7 +79,7 @@ reclass <- c(0, 60, 1, # within an hour
 
 reclass.mat <- matrix(reclass,
                       ncol = 3,
-                      byrow = T)
+                      byrow = TRUE)
 reclass.mat
 
 ## motor all
@@ -136,7 +136,7 @@ tmap_save(motor.all.plot, here("results", "rwanda", "maps","motor travel time","
 #      breaks = c(0, 60, 120, 500))
 motor.surg.cat <- reclassify(access.motor.surg,
                              reclass.mat,
-                             include.lowest = T)
+                             include.lowest = TRUE)
 # checking my work
 # barplot(motor.surg.cat)
 # plotting
@@ -167,7 +167,7 @@ tmap_save(motor.surg.plot, here("results", "rwanda", "maps","motor travel time",
 #      breaks = c(0, 60, 120, 500))
 motor.surgperm.cat <-  reclassify(access.motor.surgperm,
                                   reclass.mat,
-                                  include.lowest = T)
+                                  include.lowest = TRUE)
 # barplot(motor.surgperm.cat)
 # plotting
 motor.surgperm.plot <- tm_shape(motor.surgperm.cat) +
@@ -200,7 +200,7 @@ popsum.reclass <- c(0, 1, 1, # less than 1 person per km2
 
 popsum.reclass.mat <- matrix(popsum.reclass,
                              ncol = 3,
-                             byrow = T)
+                             byrow = TRUE)
 
 summary(popsum.agg)
 hist(popsum.agg)
@@ -210,7 +210,7 @@ hist(popsum.agg,
 # reclassifying raster
 popsum.agg.cat <- reclassify(popsum.agg,
                              popsum.reclass.mat,
-                             include.lowest = T)
+                             include.lowest = TRUE)
 popsum.agg.cat
 plot(popsum.agg.cat, 
      col = c("green","red"))
@@ -236,7 +236,7 @@ motorsurgperm1hr <- reclassify(popsumxmotorsurgperm,
                                          20, 3, # >1 person/km within 1-2hrs -- group 3
                                          30, 3), # >1 person/km 2+ hrs -- group 3
                                          ncol = 2,
-                                         byrow = T),
+                                         byrow = TRUE),
                                 include.lowest = F)
 unique(motorsurgperm1hr) # works correctly
 plot(motorsurgperm1hr)
@@ -294,7 +294,7 @@ motorsurgperm2hr <- reclassify(popsumxmotorsurgperm,
                                         20, 1, # >1 person/km within 1-2hrs -- group 1
                                         30, 3), # >1 person/km 2+ hrs -- group 3
                                       ncol = 2,
-                                      byrow = T),
+                                      byrow = TRUE),
                                include.lowest = F)
 unique(motorsurgperm2hr) # works correctly
 plot(motorsurgperm2hr)
@@ -358,7 +358,7 @@ motorsurg1hr <- reclassify(popsumxmotorsurg,
                                         20, 3, # >1 person/km within 1-2hrs -- group 3
                                         30, 3), # >1 person/km 2+ hrs -- group 3
                                       ncol = 2,
-                                      byrow = T),
+                                      byrow = TRUE),
                                include.lowest = F)
 unique(motorsurg1hr) # works correctly
 plot(motorsurg1hr)
@@ -417,7 +417,7 @@ motorsurg2hr <- reclassify(popsumxmotorsurg,
                                         20, 1, # >1 person/km within 1-2hrs -- group 1
                                         30, 3), # >1 person/km 2+ hrs -- group 3
                                       ncol = 2,
-                                      byrow = T),
+                                      byrow = TRUE),
                                include.lowest = F)
 unique(motorsurg2hr) # works correctly
 plot(motorsurg2hr)
@@ -669,7 +669,7 @@ table.admin1
 write_csv(table.admin1, here("results", "rwanda", "tables","admin_travel_time.csv"))
 
 
-#### OLD CODE -- IGNORE FOR NOW ####
+#### OLD CODE -- IGNORE ####
 
 # # walking
 # compareRaster(access.walk.all, popsum.agg)
